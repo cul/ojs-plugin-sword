@@ -1,10 +1,9 @@
 <?php
-
 /**
  * @file SwordPlugin.inc.php
  *
- * Copyright (c) 2013-2021 Simon Fraser University
- * Copyright (c) 2003-2021 John Willinsky
+ * Copyright (c) 2013-2020 Simon Fraser University
+ * Copyright (c) 2003-2020 John Willinsky
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class SwordPlugin
@@ -35,15 +34,16 @@ class SwordPlugin extends GenericPlugin {
 				HookRegistry::register('LoadHandler', array($this, 'callbackSwordLoadHandler'));
 				HookRegistry::register('Template::Settings::website', array($this, 'callbackSettingsTab'));
 				HookRegistry::register('LoadComponentHandler', array($this, 'setupGridHandler'));
-				HookRegistry::register('EditorAction::recordDecision', array($this, 'callbackAuthorDeposits'));
-				// Preprints
-				HookRegistry::register('Publication::publish', array($this, 'callbackPublish'));
+				//CUL Customization: cul ojs install does not allow author opt-in for sword deposits
+				//HookRegistry::register('EditorAction::recordDecision', array($this, 'callbackAuthorDeposits'));
+				HookRegistry::register('Publication::publish', array($this, 'callbackPublish'), HOOK_SEQUENCE_LAST);
 			}
 			return true;
 		}
 		return false;
 	}
 
+	
 	/**
 	 * Performs automatic deposit on publication
 	 * @param $hookName string
@@ -86,18 +86,27 @@ class SwordPlugin extends GenericPlugin {
 		$this->import('classes.PKPSwordDeposit');
 		$depositPointDao = DAORegistry::getDAO('DepositPointDAO');
 		$depositPoints = $depositPointDao->getByContextId($context->getId());
-		$sendDepositNotification = $this->getSetting($context->getId(), 'allowAuthorSpecify') ? true : false;
-		foreach ($depositPoints as $depositPoint) {
+		//CUL Customization: not allowing author deposit option
+		//$sendDepositNotification = $this->getSetting($context->getId(), 'allowAuthorSpecify') ? true : false;
+        $dsemail = 'ac@columbia.edu';
+		$delivery_outcome = NOTIFICATION_TYPE_SUCCESS;
+		$failure_message = "";
+		$outPath = "";
+		while ($depositPoint = $depositPoints->next()) {			
 			$depositType = $depositPoint->getType();
-			if (($depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_SELECTION)
-				|| $depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_FIXED) {
+			//CUL Customization: suppress interface deposit options
+			// if (($depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_SELECTION)
+			// 	|| $depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_FIXED) {
 				$sendDepositNotification = true;
-			}
-			if ($depositType != SWORD_DEPOSIT_TYPE_AUTOMATIC)
-				continue;
-
+			//CUL Customization: suppress interface deposit options				
+			// }
+			// if ($depositType != SWORD_DEPOSIT_TYPE_AUTOMATIC)
+			// 	continue;
 			try {
+
 				$deposit = new PKPSwordDeposit($submission);
+//CUL Customization: add path to CUL sword endpoint deposit directory
+				$outPath = end(explode('/', $deposit->getOutpath()));
 				$deposit->setMetadata($request);
 				$deposit->addEditorial();
 				$deposit->createPackage();
@@ -110,66 +119,68 @@ class SwordPlugin extends GenericPlugin {
 				$deposit->cleanup();
 			}
 			catch (Exception $e) {
-				$contents = __('plugins.importexport.sword.depositFailed') . ': ' . $e->getMessage();
-				$notificationMgr = new NotificationManager();
-				$notificationMgr->createTrivialNotification(
-					$user->getId(),
-					NOTIFICATION_TYPE_ERROR,
-					array('contents' => $contents)
-				);
+				$delivery_outcome = NOTIFICATION_TYPE_ERROR;
+				$failure_message = __('plugins.importexport.sword.depositFailed') . ': ' . $e->getMessage();
 				error_log($e->getTraceAsString());
 			}
-
-			$user = $request->getUser();
-			$params = array(
-				'itemTitle' => $submission->getLocalizedTitle(),
-				'repositoryName' => $depositPoint->getLocalizedName()
-			);
-			$notificationMgr = new NotificationManager();
-			$notificationMgr->createTrivialNotification(
-				$user->getId(),
-				NOTIFICATION_TYPE_SUCCESS,
-				array('contents' => __('plugins.generic.sword.automaticDepositComplete', $params))
-			);
+			//CUL Customization: only notifying DS email
+			//$user = $request->getUser();
+			// $params = array(
+			// 	'itemTitle' => $submission->getLocalizedTitle(),
+			// 	'repositoryName' => $depositPoint->getLocalizedName()
+			// );
+			// $notificationMgr = new NotificationManager();
+			// $notificationMgr->createTrivialNotification(
+			// 	$user->getId(),
+			// 	NOTIFICATION_TYPE_SUCCESS,
+			// 	array('contents' => __('plugins.generic.sword.automaticDepositComplete', $params))
+			// );
 		}
-
 		if ($sendDepositNotification) {
-			$submissionAuthors = [];
-			$dao = new StageAssignmentDAO();
-			$daoResult = $dao->getBySubmissionAndRoleId($submission->getId(), ROLE_ID_AUTHOR);
-			while ($record = $daoResult->next()) {
-				$userId = $record->getData('userId');
-				if (!in_array($userId, $submissionAuthors)) {
-					array_push($submissionAuthors, $userId);
-				}
-			}
+		//CUL Customization: do not notify authors
+		//	$submissionAuthors = [];
+		//	$dao = new StageAssignmentDAO();
+		//	$daoResult = $dao->getBySubmissionAndRoleId($submission->getId(), ROLE_ID_AUTHOR);
+		//	while ($record = $daoResult->next()) {
+		//		$userId = $record->getData('userId');
+		//		if (!in_array($userId, $submissionAuthors)) {
+		//			array_push($submissionAuthors, $userId);
+		//		}
+		//	}
 
-			$userDao = DAORegistry::getDAO('UserDAO');
-
-			foreach ($submissionAuthors as $userId) {
-				$submittingUser = $userDao->getById($userId);
-				$contactName = $context->getSetting('contactName');
-				$contactEmail = $context->getSetting('contactEmail');
+			//$userDao = DAORegistry::getDAO('UserDAO');
+			//CUL Customization: do not notify authors, set OJS admin as sender			
+//			foreach ($submissionAuthors as $userId) {
+			//$userId = "1";
+			//	$submittingUser = $userDao->getById($userId);
+				$contactName = "OJS Admin";
+				$contactEmail = "publishing@library.columbia.edu";
 
 				import('lib.pkp.classes.mail.SubmissionMailTemplate');
 				$mail = new SubmissionMailTemplate($submission, 'SWORD_DEPOSIT_NOTIFICATION', null, $context, true);
 
 				$mail->setFrom($contactEmail, $contactName);
-				$mail->addRecipient($submittingUser->getEmail(), $submittingUser->getFullName());
+				//CUL Customization: only notify DS email				
+				//$mail->addRecipient($submittingUser->getEmail(), $submittingUser->getFullName());
+				$mail->addRecipient($dsemail, 'Digital Scholarship Sword Deposit Administration');
 
 				$mail->assignParams(array(
-					'contextName' => $context->getLocalizedName(),
+					'ID' => $context->getLocalizedName()." - ".$submission->getId(),
+					'directoryName' => $outPath,
 					'submissionTitle' => $submission->getLocalizedTitle(),
+					'authorString' => $submission->getAuthorString(),
+					'date' => date("m.d.y"),
+					'status' => ($delivery_outcome == NOTIFICATION_TYPE_SUCCESS) ? 'Deposit Succeeded' : $failure_message,
 					'swordDepositUrl' => $dispatcher->url(
 						$request, ROUTE_PAGE, null, 'sword', 'index', $submission->getId()
 					)
 				));
-
 				$mail->send($request);
-			}
+			//CUL Customization: close foreach				
+			//}
 		}
 
-		return false;
+	return false;
 	}
 
 	/**
@@ -315,11 +326,10 @@ class SwordPlugin extends GenericPlugin {
 	}
 
 	/**
-	 * @copydoc PKPPlugin::getInstallMigration()
+	 * Get the filename of the ADODB schema for this plugin.
 	 */
-	function getInstallMigration() {
-		$this->import('classes.SwordSchemaMigration');
-		return new SwordSchemaMigration();
+	public function getInstallSchemaFile() {
+		return $this->getPluginPath() . '/schema.xml';
 	}
 
 	/**
