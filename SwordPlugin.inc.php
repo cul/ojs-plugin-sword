@@ -2,8 +2,8 @@
 /**
  * @file SwordPlugin.inc.php
  *
- * Copyright (c) 2013-2020 Simon Fraser University
- * Copyright (c) 2003-2020 John Willinsky
+ * Copyright (c) 2013-2021 Simon Fraser University
+ * Copyright (c) 2003-2021 John Willinsky
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class SwordPlugin
@@ -42,7 +42,6 @@ class SwordPlugin extends GenericPlugin {
 		}
 		return false;
 	}
-
 	
 	/**
 	 * Performs automatic deposit on publication
@@ -326,11 +325,12 @@ class SwordPlugin extends GenericPlugin {
 	}
 
 	/**
-	 * Get the filename of the ADODB schema for this plugin.
+	 * @copydoc PKPPlugin::getInstallMigration()
 	 */
-	public function getInstallSchemaFile() {
-		return $this->getPluginPath() . '/schema.xml';
-	}
+	function getInstallMigration() {
+		$this->import('classes.SwordSchemaMigration');
+		return new SwordSchemaMigration();
+		}
 
 	/**
 	 * @see PKPPlugin::getInstallEmailTemplatesFile()
