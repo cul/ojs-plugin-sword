@@ -10,7 +10,15 @@ tab. Find the Sword plugin listed there and use the `Install` button to install 
 
 ## CUL Email Notification Configuration
 
-CUL notification specifications require modifications to the data in two OJS database tables.
+Configure values for Sword Deposit notification sender and recipient by adding a cul_sword block and providing values for the following two variables:
+
+[cul_sword]
+
+recipient_email = ""
+
+sender_email = "" 
+
+In addition, CUL notification specifications require modifications to the data in two OJS database tables.
 
 In the email_templates_default table, for the record with email_key "SWORD_DEPOSIT_NOTIFICATION", set can_edit to 0.
 

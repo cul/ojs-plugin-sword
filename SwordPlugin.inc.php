@@ -87,7 +87,9 @@ class SwordPlugin extends GenericPlugin {
 		$depositPoints = $depositPointDao->getByContextId($context->getId());
 		//CUL Customization: not allowing author deposit option
 		//$sendDepositNotification = $this->getSetting($context->getId(), 'allowAuthorSpecify') ? true : false;
-        $dsemail = 'ac@columbia.edu';
+		$sendDepositNotification = true;
+		$recipient_email = Config::getVar('cul_sword', 'recipient_email');
+		$sender_email = Config::getVar('cul_sword', 'sender_email');
 		$delivery_outcome = NOTIFICATION_TYPE_SUCCESS;
 		$failure_message = "";
 		$outPath = "";
@@ -96,7 +98,7 @@ class SwordPlugin extends GenericPlugin {
 			//CUL Customization: suppress interface deposit options
 			// if (($depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_SELECTION)
 			// 	|| $depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_FIXED) {
-				$sendDepositNotification = true;
+			//	$sendDepositNotification = true;
 			//CUL Customization: suppress interface deposit options				
 			// }
 			// if ($depositType != SWORD_DEPOSIT_TYPE_AUTOMATIC)
@@ -153,7 +155,7 @@ class SwordPlugin extends GenericPlugin {
 			//$userId = "1";
 			//	$submittingUser = $userDao->getById($userId);
 				$contactName = "OJS Admin";
-				$contactEmail = "publishing@library.columbia.edu";
+				$contactEmail = $sender_email;
 
 				import('lib.pkp.classes.mail.SubmissionMailTemplate');
 				$mail = new SubmissionMailTemplate($submission, 'SWORD_DEPOSIT_NOTIFICATION', null, $context, true);
@@ -161,7 +163,7 @@ class SwordPlugin extends GenericPlugin {
 				$mail->setFrom($contactEmail, $contactName);
 				//CUL Customization: only notify DS email				
 				//$mail->addRecipient($submittingUser->getEmail(), $submittingUser->getFullName());
-				$mail->addRecipient($dsemail, 'Digital Scholarship Sword Deposit Administration');
+				$mail->addRecipient($recipient_email, 'Digital Scholarship Sword Deposit Administration');
 
 				$mail->assignParams(array(
 					'ID' => $context->getLocalizedName()." - ".$submission->getId(),
