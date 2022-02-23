@@ -36,6 +36,11 @@ class PKPSwordDeposit {
 	/** @var Article */
 	protected $_article = null;
 
+//CUL Customization: path to CUL sword endpoint deposit directory
+	public function getOutPath(){
+		return $this->_outPath;
+	}
+
 	/**
 	 * Constructor.
 	 * Create a SWORD deposit object for a submission
@@ -75,15 +80,27 @@ class PKPSwordDeposit {
 	 * @param $request PKPRequest
 	 */
 	public function setMetadata($request) {
+//CUL Customization: add publisher, date available, identifier, subjects to deposit package
+		$this->_package->setPublisher($request->getContext()->getLocalizedName());
+		$this->_package->setDateAvailable($this->_submission->getDatePublished());
+		$this->_package->setIdentifier($this->_submission->getStoredPubId('doi'));
 		$this->_package->setCustodian($this->_context->getContactName());
 		$this->_package->setTitle(html_entity_decode($this->_submission->getLocalizedTitle(), ENT_QUOTES, 'UTF-8'));
 		$this->_package->setAbstract(html_entity_decode(strip_tags($this->_submission->getLocalizedAbstract()), ENT_QUOTES, 'UTF-8'));
 		$this->_package->setType($this->_section->getLocalizedIdentifyType());
 		$publication = $this->_submission->getCurrentPublication();
+
+        $dao = DAORegistry::getDAO('SubmissionKeywordDAO');
+        $keywords = $dao->getKeywords($publication->getId(), ['en_US'])['en_US'];
+		foreach ($keywords as $keyword) {
+                        $this->_package->addSubject($keyword);
+		}
 		foreach ($publication->getData('authors') as $author) {
-			$creator = $author->getFullName(true);
-			$affiliation = $author->getLocalizedAffiliation();
-			if (!empty($affiliation)) $creator .= "; $affiliation";
+                        //CUL customization: format creator last, first and remove affiliation from creator value
+                        $creator = $author->getFamilyName($publication->getData('locale')).", ".$author->getGivenName($publication->getData('locale'));                
+			//$creator = $author->getFullName(true);
+			//$affiliation = $author->getLocalizedAffiliation();
+			//if (!empty($affiliation)) $creator .= "; $affiliation";
 			$this->_package->addCreator($creator);
 			$this->_package->sac_name_records[] = [
 				'family' => $author->getFamilyName($publication->getData('locale')),
@@ -180,7 +197,7 @@ class PKPSwordDeposit {
 			'http://purl.org/net/sword/package/METSDSpaceSIP',
 			'application/zip', false, true
 		);
-
+		
 		if ($response->sac_status > 299)
 			throw new Exception("Status: $response->sac_status , summary: $response->sac_summary");
 
