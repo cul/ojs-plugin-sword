@@ -96,9 +96,11 @@ class PKPSwordDeposit {
                         $this->_package->addSubject($keyword);
 		}
 		foreach ($publication->getData('authors') as $author) {
-			$creator = $author->getFullName(true);
-			$affiliation = $author->getLocalizedAffiliation();
-			if (!empty($affiliation)) $creator .= "; $affiliation";
+                        //CUL customization: format creator last, first and remove affiliation from creator value
+                        $creator = $author->getFamilyName($publication->getData('locale')).", ".$author->getGivenName($publication->getData('locale'));                
+			//$creator = $author->getFullName(true);
+			//$affiliation = $author->getLocalizedAffiliation();
+			//if (!empty($affiliation)) $creator .= "; $affiliation";
 			$this->_package->addCreator($creator);
 			$this->_package->sac_name_records[] = [
 				'family' => $author->getFamilyName($publication->getData('locale')),
