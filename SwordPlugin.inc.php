@@ -93,7 +93,8 @@ class SwordPlugin extends GenericPlugin {
 		$delivery_outcome = NOTIFICATION_TYPE_SUCCESS;
 		$failure_message = "";
 		$outPath = "";
-		while ($depositPoint = $depositPoints->next()) {			
+
+    foreach ($depositPoints as $depositPoint) {
 			$depositType = $depositPoint->getType();
 			//CUL Customization: suppress interface deposit options
 			// if (($depositType == SWORD_DEPOSIT_TYPE_OPTIONAL_SELECTION)
