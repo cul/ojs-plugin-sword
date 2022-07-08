@@ -10,7 +10,7 @@ tab. Find the Sword plugin listed there and use the `Install` button to install 
 
 ## CUL Email Notification Configuration
 
-Configure values for Sword Deposit notification sender and recipient by adding a cul_sword block and providing values for the following two variables:
+Configure values for Sword Deposit notification sender and recipient by adding a cul_sword block to the OJS config file and providing values for the following two variables:
 
 [cul_sword]
 
